@@ -16,7 +16,7 @@ function check_config(filename) {
     }
 }
 
-function encrypt(text, key, iv) {
+function encrypt(text, key, iv) { //text的类型：toString('utf8')
     var cipher = crypto.createCipheriv('id-aes256-GCM', key, iv);	
     var enc_text = cipher.update(text, 'utf8', 'base64');
     enc_text += cipher.final('base64');
@@ -125,7 +125,26 @@ function incrementIV (buffer, mod, inc_by) {
 /*
 Splits val_to_be_split into s shares and s_threshold to reconstruct it
 */
-function splitIntoShares(string_to_be_split, s, s_threshold) {
+function splitIntoShares(string_to_be_split, s, s_threshold) {//toString('hex')
+    //从AuthKey生成随机32字节（256位）密钥key
+    var key = generateBytes(32);
+    //var key = getPBKDF2(auth, pbkdf_salt);
+	
+	
+    //用key进行AES-256-ECB加密
+    var cipher = crypto.createCipheriv('AES-256-ECB', key, iv);	
+    var enc_text = cipher.update(string_to_be_split, 'utf8', 'base64');
+    enc_text += cipher.final('base64');
+	
+	
+    //对密文hash并与key异或，然后与密文连接
+    var hash = crypto.createHash('sha256');
+    var cd = key ^ (hash.update(enc_text));
+    var cipher_text = enc_text + cd;
+	
+	
+	
+	
     var shares = secrets.share(secrets.str2hex(string_to_be_split), s, s_threshold);
     return shares;
 }
@@ -613,11 +632,11 @@ else if (command == "check-config") {
 }
 else if (command == "encryptConfig") {
 	var configJSON = process.argv[3];
-    var authKey = process.argv[4];
+    var authKey = process.argv[4];//master_password
     encryptConfigString(configJSON, authKey);	
 } 
 else if (command == "checkConfigKeys") {
-    var authKey = process.argv[3];
+    var authKey = process.argv[3];//master_password
     var table_size = process.argv[4];
 	var decrypted_outputs = decrypt_input(authKey);
     checkConfigKeys(decrypted_outputs.input, authKey, table_size);
